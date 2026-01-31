@@ -1,0 +1,22 @@
+# Virtual environment
+venv/
+
+# Model files (large, external)
+models/
+*.gguf
+
+# Cache / generated files
+cache/
+__pycache__/
+*.pkl
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/

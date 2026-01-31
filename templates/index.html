@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Agentic RAG Assistant</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: auto;
+            padding: 30px;
+            background: white;
+            min-height: 100vh;
+        }
+
+        h1 {
+            text-align: center;
+            color: #444;
+        }
+
+        .upload-box, .chat-box {
+            margin-bottom: 30px;
+        }
+
+        input[type="file"],
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 18px;
+            border-radius: 8px;
+            border: none;
+            background: #667eea;
+            color: white;
+            cursor: pointer;
+            font-size: 15px;
+        }
+
+        button:hover {
+            background: #556cd6;
+        }
+
+        .message {
+            color: green;
+            margin-top: 10px;
+        }
+
+        .chat-history {
+            margin-top: 20px;
+        }
+
+        .bubble {
+            padding: 12px 15px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            max-width: 80%;
+        }
+
+        .user {
+            background: #e8eaf6;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .bot {
+            background: #f3e8ff;
+            align-self: flex-start;
+            margin-right: auto;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <h1>🤖 Agentic RAG Assistant</h1>
+
+    <!-- Upload -->
+    <div class="upload-box">
+        <h3>Upload Knowledge (PDF)</h3>
+        <form method="post" enctype="multipart/form-data">
+            <input type="file" name="document">
+            <button type="submit">Upload & Index</button>
+        </form>
+
+        {% if message %}
+            <p class="message">{{ message }}</p>
+        {% endif %}
+    </div>
+
+    <hr>
+
+    <!-- Chat -->
+    <div class="chat-box">
+        <h3>Ask Questions</h3>
+        <form method="post">
+            <input type="text" name="question" placeholder="Ask something about the documents">
+            <button type="submit">Ask</button>
+        </form>
+    </div>
+   
+
+
+    <!-- Chat History -->
+    <div class="chat-history chat-container">
+        {% for item in history %}
+            <div class="bubble user">
+                <strong>You:</strong><br>{{ item.question }}
+            </div>
+            <div class="bubble bot">
+                <strong>AI:</strong><br>{{ item.answer }}
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+<script>
+    document.querySelectorAll("form").forEach(form => {
+        form.addEventListener("submit", () => {
+            document.body.style.cursor = "wait";
+        });
+    });
+</script>
+
+
+</body>
+</html>
