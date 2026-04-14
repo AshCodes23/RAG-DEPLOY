@@ -1,5 +1,8 @@
 from flask import Flask, render_template, request
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 from src.rag_core import RAGSystem
 
 app = Flask(__name__)
@@ -38,4 +41,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(debug=False)
+    app.run(debug=True, port=5001)

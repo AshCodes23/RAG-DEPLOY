@@ -1,6 +1,6 @@
 flask
 pypdf
-sentence-transformers
 faiss-cpu
-ctransformers
+google-genai
+python-dotenv
 numpy

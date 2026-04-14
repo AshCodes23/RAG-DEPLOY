@@ -1,145 +1,446 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Agentic RAG Assistant</title>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agentic RAG | Document Intelligence</title>
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        :root {
+            --primary: #8b5cf6;
+            --primary-glow: rgba(139, 92, 246, 0.4);
+            --secondary: #ec4899;
+            --bg-deep: #050811;
+            --bg-surface: rgba(15, 23, 42, 0.6);
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --success: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
         body {
-            font-family: 'Segoe UI', sans-serif;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            font-family: 'Inter', sans-serif;
+            background: radial-gradient(circle at top right, #1e1b4b, #050811);
+            background-attachment: fixed;
             margin: 0;
             padding: 0;
-            color: #333;
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
         }
 
-        .container {
-            max-width: 900px;
-            margin: auto;
+        /* --- DASHBOARD LAYOUT --- */
+        .app-container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        /* --- SIDEBAR --- */
+        .sidebar {
+            width: 320px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
             padding: 30px;
-            background: white;
-            min-height: 100vh;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
         }
 
-        h1 {
-            text-align: center;
-            color: #444;
+        .brand {
+            margin-bottom: 40px;
         }
 
-        .upload-box, .chat-box {
+        .brand h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            margin: 0;
+            background: linear-gradient(135deg, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .brand p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .nav-section {
             margin-bottom: 30px;
         }
 
-        input[type="file"],
-        input[type="text"] {
-            width: 100%;
-            padding: 12px;
-            margin-top: 10px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
+        .nav-section h3 {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        button {
-            margin-top: 10px;
-            padding: 10px 18px;
-            border-radius: 8px;
-            border: none;
-            background: #667eea;
-            color: white;
-            cursor: pointer;
-            font-size: 15px;
-        }
-
-        button:hover {
-            background: #556cd6;
-        }
-
-        .message {
-            color: green;
-            margin-top: 10px;
-        }
-
-        .chat-history {
-            margin-top: 20px;
-        }
-
-        .bubble {
-            padding: 12px 15px;
-            border-radius: 12px;
-            margin-bottom: 12px;
-            max-width: 80%;
-        }
-
-        .user {
-            background: #e8eaf6;
-            align-self: flex-end;
-            margin-left: auto;
-        }
-
-        .bot {
-            background: #f3e8ff;
-            align-self: flex-start;
-            margin-right: auto;
-        }
-
-        .chat-container {
+        /* --- UPLOAD SECTION --- */
+        .upload-compact {
             display: flex;
             flex-direction: column;
+            gap: 15px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px dashed var(--glass-border);
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .file-input-wrapper:hover {
+            border-color: var(--primary);
+            background: rgba(139, 92, 246, 0.05);
+        }
+
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-input-wrapper i {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .btn-sidebar {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--primary-glow);
+        }
+
+        .btn-sidebar:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- CHAT HISTORY --- */
+        .chat-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            scroll-behavior: smooth;
+        }
+
+        .msg {
+            max-width: 80%;
+            padding: 20px 24px;
+            border-radius: 20px;
+            line-height: 1.7;
+            position: relative;
+            animation: slideUp 0.4s ease-out forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            border-bottom-right-radius: 4px;
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.2);
+        }
+
+        .msg.bot {
+            align-self: flex-start;
+            background: var(--bg-surface);
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            border-bottom-left-radius: 4px;
+        }
+
+        .msg-meta {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            opacity: 0.5;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* --- INPUT AREA --- */
+        .input-bar {
+            padding: 30px 40px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .input-container {
+            display: flex;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--glass-border);
+            padding: 8px 8px 8px 24px;
+            border-radius: 20px;
+            align-items: center;
+        }
+
+        .input-container:focus-within {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--primary-glow);
+        }
+
+        .input-container input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            padding: 12px 0;
+        }
+
+        .btn-send {
+            background: var(--primary);
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-send:hover {
+            transform: scale(1.05);
+            background: #9333ea;
+        }
+
+        /* --- STATUS BAR --- */
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            margin-top: 15px;
+        }
+
+        /* --- LOADER --- */
+        #loader {
+            display: none;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: var(--bg-surface);
+            padding: 20px 40px;
+            border-radius: 20px;
+            border: 1px solid var(--glass-border);
+            z-index: 100;
+        }
+
+        .dots-loader span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: var(--primary);
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: bounce 0.6s infinite alternate;
+        }
+        .dots-loader span:nth-child(2) { animation-delay: 0.2s; }
+        .dots-loader span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-8px); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: var(--glass-border); border-radius: 10px; }
+
+        footer {
+            margin-top: auto;
+            padding-top: 20px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            opacity: 0.6;
+            border-top: 1px solid var(--glass-border);
         }
     </style>
 </head>
-
 <body>
-<div class="container">
 
-    <h1>🤖 Agentic RAG Assistant</h1>
+<div class="app-container">
+    <!-- Sidebar / Knowledge Hub -->
+    <aside class="sidebar">
+        <div class="brand">
+            <h1>Agentic RAG</h1>
+            <p>Intelligence Ecosystem LLM</p>
+        </div>
 
-    <!-- Upload -->
-    <div class="upload-box">
-        <h3>Upload Knowledge (PDF)</h3>
-        <form method="post" enctype="multipart/form-data">
-            <input type="file" name="document">
-            <button type="submit">Upload & Index</button>
-        </form>
+        <nav class="nav-section">
+            <h3><i data-lucide="database" size="14"></i> Knowledge Hub</h3>
+            <div class="upload-compact">
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    <div class="file-input-wrapper">
+                        <i data-lucide="upload-cloud"></i>
+                        <p style="margin: 5px 0; font-size: 0.9rem;">Drop PDF here</p>
+                        <span style="font-size: 0.75rem; color: var(--text-muted)">Max size 10MB</span>
+                        <input type="file" name="document" required accept=".pdf" id="fileInput">
+                    </div>
+                    <button type="submit" class="btn-sidebar" style="width: 100%; margin-top: 10px;">
+                        Deploy Knowledge
+                    </button>
+                </form>
 
-        {% if message %}
-            <p class="message">{{ message }}</p>
-        {% endif %}
-    </div>
+                <div id="fileLabel" style="font-size: 0.75rem; color: var(--success); margin-top: 5px; display: none;">
+                    Selected: <span id="fileName"></span>
+                </div>
 
-    <hr>
-
-    <!-- Chat -->
-    <div class="chat-box">
-        <h3>Ask Questions</h3>
-        <form method="post">
-            <input type="text" name="question" placeholder="Ask something about the documents">
-            <button type="submit">Ask</button>
-        </form>
-    </div>
-   
-
-
-    <!-- Chat History -->
-    <div class="chat-history chat-container">
-        {% for item in history %}
-            <div class="bubble user">
-                <strong>You:</strong><br>{{ item.question }}
+                {% if message %}
+                    <div class="status-badge">
+                        <i data-lucide="check-circle" size="14"></i>
+                        {{ message }}
+                    </div>
+                {% endif %}
             </div>
-            <div class="bubble bot">
-                <strong>AI:</strong><br>{{ item.answer }}
-            </div>
-        {% endfor %}
-    </div>
+        </nav>
 
+        <footer>
+            Local Agentic RAG System &copy; 2026 | LLM
+        </footer>
+    </aside>
+
+    <!-- Main Content / Chat -->
+    <main class="main-content">
+        <div id="loader">
+            <div class="msg-meta">Analyzing Knowledge</div>
+            <div class="dots-loader"><span></span><span></span><span></span></div>
+        </div>
+
+        <div class="chat-area" id="chatArea">
+            {% for item in history %}
+                <div class="msg user">
+                    <div class="msg-meta"><i data-lucide="user" size="12"></i> You</div>
+                    {{ item.question }}
+                </div>
+                <div class="msg bot">
+                    <div class="msg-meta"><i data-lucide="bot" size="12"></i> LLM Intelligence</div>
+                    {{ item.answer }}
+                </div>
+            {% endfor %}
+
+            {% if not history %}
+                <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); text-align: center; opacity: 0.5;">
+                    <i data-lucide="message-square" size="48" style="margin-bottom: 20px;"></i>
+                    <p>No conversation yet.<br>Upload a PDF and ask your first question!</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <section class="input-bar">
+            <form method="post" id="chatForm">
+                <div class="input-container">
+                    <input type="text" name="question" placeholder="Ask a question about your documents..." required autocomplete="off">
+                    <button type="submit" class="btn-send">
+                        <i data-lucide="send" size="18"></i>
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
 </div>
+
 <script>
-    document.querySelectorAll("form").forEach(form => {
-        form.addEventListener("submit", () => {
-            document.body.style.cursor = "wait";
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    const chatForm = document.getElementById('chatForm');
+    const uploadForm = document.getElementById('uploadForm');
+    const loader = document.getElementById('loader');
+    const chatArea = document.getElementById('chatArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileLabel = document.getElementById('fileLabel');
+    const fileName = document.getElementById('fileName');
+
+    // Show loading state
+    [chatForm, uploadForm].forEach(form => {
+        form.addEventListener('submit', () => {
+            if (loader) loader.style.display = 'block';
+            document.body.style.cursor = 'wait';
         });
     });
-</script>
 
+    // File selection UI feedback
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            fileName.textContent = e.target.files[0].name;
+            fileLabel.style.display = 'block';
+        }
+    });
+
+    // Auto-scroll to bottom
+    const scrollToBottom = () => {
+        chatArea.scrollTop = chatArea.scrollHeight;
+    };
+    scrollToBottom();
+
+    // Re-scroll on window resize or potential image loads
+    window.addEventListener('load', scrollToBottom);
+</script>
 
 </body>
 </html>

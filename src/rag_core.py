@@ -1,6 +1,5 @@
 from pypdf import PdfReader
-from sentence_transformers import SentenceTransformer
-from ctransformers import AutoModelForCausalLM
+from google import genai
 import faiss
 import numpy as np
 import os
@@ -10,23 +9,20 @@ import pickle
 USE_QUERY_REWRITE = True      # Turn OFF if too slow
 USE_VALIDATION = False        # Turn ON only if you accept high latency
 TOP_K = 2
-MAX_TOKENS = 120
+MAX_TOKENS = 512
 # -------------------------------------------------
 
 
 class RAGSystem:
     def __init__(self):
-        print("🔥 Initializing RAG system (models load ONCE)")
+        print("Initializing RAG system (models load ONCE)")
 
-        # Embedding model
-        self.embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+        # Configure Gemini API Client
+        self.client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
-        # Local LLM (CPU)
-        self.llm = AutoModelForCausalLM.from_pretrained(
-            "models",
-            model_file="mistral.gguf",
-            model_type="mistral"
-        )
+        # Gemini LLM model name
+        self.llm_model = "models/gemini-flash-latest"
+        self.embed_model = "models/gemini-embedding-001"
 
         self.chunks = []
         self.index = None
@@ -35,40 +31,90 @@ class RAGSystem:
         self._load_or_build_index()
 
     # --------------------------------------------------
+    # Embed text using Gemini embedding API
+    # --------------------------------------------------
+    def _embed(self, texts):
+        """Embed a list of texts using Gemini embedding model."""
+        if isinstance(texts, str):
+            texts = [texts]
+        
+        # New google-genai batch embedding
+        response = self.client.models.embed_content(
+            model=self.embed_model,
+            contents=texts,
+            config={'task_type': 'RETRIEVAL_DOCUMENT'}
+        )
+        
+        embeddings = [item.values for item in response.embeddings]
+        return np.array(embeddings, dtype=np.float32)
+
+    def _embed_query(self, text):
+        """Embed a single query string."""
+        response = self.client.models.embed_content(
+            model=self.embed_model,
+            contents=text,
+            config={'task_type': 'RETRIEVAL_QUERY'}
+        )
+        # For single query, it returns a list of one
+        return np.array([response.embeddings[0].values], dtype=np.float32)
+
+    # --------------------------------------------------
     # Load documents and cached vector store
     # --------------------------------------------------
     def _load_or_build_index(self):
         cache_path = "cache/vector_store.pkl"
 
         if os.path.exists(cache_path):
-            with open(cache_path, "rb") as f:
-                self.chunks, self.index = pickle.load(f)
-            print("✅ Loaded cached vector store")
-            return
+            try:
+                with open(cache_path, "rb") as f:
+                    self.chunks, self.index = pickle.load(f)
+                print("Loaded cached vector store")
+                return
+            except Exception as e:
+                print(f"Error loading cache: {e}. Rebuilding...")
 
-        print("📄 Building vector store from documents...")
+        print("Building vector store from documents...")
         full_text = ""
 
-        for file in os.listdir("data/docs"):
-            if file.endswith(".pdf"):
-                reader = PdfReader(os.path.join("data/docs", file))
+        doc_dir = "data/docs"
+        os.makedirs(doc_dir, exist_ok=True)
+
+        files = [f for f in os.listdir(doc_dir) if f.endswith(".pdf")]
+        if not files:
+            print("No documents found in data/docs. Upload a PDF to get started.")
+            return
+
+        for file in files:
+            try:
+                reader = PdfReader(os.path.join(doc_dir, file))
                 for page in reader.pages:
                     text = page.extract_text()
                     if text:
                         full_text += text
+            except Exception as e:
+                print(f"Error reading {file}: {e}")
 
         self.chunks = self._chunk_text(full_text)
 
-        embeddings = self.embed_model.encode(self.chunks)
-        dim = embeddings.shape[1]
+        if not self.chunks:
+            print("No text extracted from documents.")
+            return
 
-        self.index = faiss.IndexFlatL2(dim)
-        self.index.add(np.array(embeddings))
+        print("Generating embeddings via Gemini...")
+        try:
+            embeddings = self._embed(self.chunks)
+            dim = embeddings.shape[1]
 
-        with open(cache_path, "wb") as f:
-            pickle.dump((self.chunks, self.index), f)
+            self.index = faiss.IndexFlatL2(dim)
+            self.index.add(embeddings)
 
-        print("✅ Vector store built and cached")
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            with open(cache_path, "wb") as f:
+                pickle.dump((self.chunks, self.index), f)
+
+            print("Vector store built and cached")
+        except Exception as e:
+            print(f"Error building index: {e}")
 
     # --------------------------------------------------
     # Rebuild index (called after new PDF upload)
@@ -109,7 +155,11 @@ Question:
 
 Rewritten query:
 """
-        return self.llm(prompt, max_new_tokens=25).strip()
+        response = self.client.models.generate_content(
+            model=self.llm_model,
+            contents=prompt
+        )
+        return response.text.strip()
 
     # --------------------------------------------------
     # Validation Agent (OPTIONAL, SLOW)
@@ -129,22 +179,36 @@ SUPPORTED
 or
 NOT_SUPPORTED
 """
-        verdict = self.llm(prompt, max_new_tokens=20).upper()
-        return verdict.strip().startswith("SUPPORTED")
+        response = self.client.models.generate_content(
+            model=self.llm_model,
+            contents=prompt
+        )
+        verdict = response.text.strip().upper()
+        return verdict.startswith("SUPPORTED")
 
     # --------------------------------------------------
     # MAIN RAG PIPELINE
     # --------------------------------------------------
     def ask(self, user_question):
 
+        if not self.index:
+            return "No documents indexed yet. Please upload a PDF first."
+
         # ----- Step 1: Rewrite query (optional) -----
         if USE_QUERY_REWRITE:
-            query = self._rewrite_query(user_question)
+            try:
+                query = self._rewrite_query(user_question)
+            except:
+                query = user_question
         else:
             query = user_question
 
         # ----- Step 2: Embed query -----
-        query_embedding = self.embed_model.encode([query])
+        try:
+            query_embedding = self._embed_query(query)
+        except Exception as e:
+            print(f"Embedding error: {e}")
+            return "Error generating embeddings for the query."
 
         # ----- Step 3: Retrieve context -----
         _, indices = self.index.search(query_embedding, TOP_K)
@@ -172,13 +236,24 @@ Question:
 
 Answer:
 """
-        answer = self.llm(prompt, max_new_tokens=MAX_TOKENS)
+        try:
+            response = self.client.models.generate_content(
+                model=self.llm_model,
+                contents=prompt
+            )
+            answer = response.text.strip()
+        except Exception as e:
+            print(f"Generation error: {e}")
+            answer = "Error generating response from LLM."
 
         # ----- Step 6: Validation (optional) -----
         if USE_VALIDATION:
-            is_valid = self._validate_answer(context, answer)
-            if not is_valid:
-                answer = "I don't know based on the document."
+            try:
+                is_valid = self._validate_answer(context, answer)
+                if not is_valid:
+                    answer = "I don't know based on the document."
+            except:
+                pass
 
         # ----- Step 7: Store memory -----
         self.conversation_memory.append({
