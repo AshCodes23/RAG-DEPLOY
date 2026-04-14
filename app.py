@@ -6,7 +6,8 @@ load_dotenv()
 from src.rag_core import RAGSystem
 
 app = Flask(__name__)
-app.config["UPLOAD_FOLDER"] = "data/docs"
+app.config["UPLOAD_FOLDER"] = "/tmp/docs"
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
 rag = RAGSystem()  # models load ONCE
 

@@ -62,7 +62,7 @@ class RAGSystem:
     # Load documents and cached vector store
     # --------------------------------------------------
     def _load_or_build_index(self):
-        cache_path = "cache/vector_store.pkl"
+        cache_path = "/tmp/cache/vector_store.pkl"
 
         if os.path.exists(cache_path):
             try:
@@ -76,12 +76,12 @@ class RAGSystem:
         print("Building vector store from documents...")
         full_text = ""
 
-        doc_dir = "data/docs"
+        doc_dir = "/tmp/docs"
         os.makedirs(doc_dir, exist_ok=True)
 
         files = [f for f in os.listdir(doc_dir) if f.endswith(".pdf")]
         if not files:
-            print("No documents found in data/docs. Upload a PDF to get started.")
+            print(f"No documents found in {doc_dir}. Upload a PDF to get started.")
             return
 
         for file in files:
@@ -120,7 +120,7 @@ class RAGSystem:
     # Rebuild index (called after new PDF upload)
     # --------------------------------------------------
     def rebuild_index(self):
-        cache_path = "cache/vector_store.pkl"
+        cache_path = "/tmp/cache/vector_store.pkl"
         if os.path.exists(cache_path):
             os.remove(cache_path)
 
